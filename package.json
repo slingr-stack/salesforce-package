@@ -1,0 +1,102 @@
+{
+    "name": "skeleton",
+    "label": "Skeleton Package",
+    "dependencies": [
+        {
+            "type": "service",
+            "name": "http",
+            "version": "v1.3.7",
+            "instanceId": "shared"
+        },
+        {
+            "type": "package",
+            "name": "oauth",
+            "version": "v1.0.19"
+        }
+    ],
+    "configurationBuilder": "/configurationBuilder.js",
+    "configuration": [
+        {
+            "name": "SKELETON_API_BASE_URL",
+            "label": "Skeleton Api Url",
+            "type": "label",
+            "value": "https://example.com/"
+        },
+        {
+            "name": "choice",
+            "label": "Choice",
+            "required": false,
+            "defaultValue": "true",
+            "type": "buttonsGroup",
+            "typeOptions": {
+                "allowCustom": true,
+                "possibleValues": [
+                    {
+                        "label": "True",
+                        "name": "true"
+                    },
+                    {
+                        "label": "False",
+                        "name": "false"
+                    },
+                    {
+                        "label": "Other",
+                        "name": "other"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "text",
+            "label": "Text",
+            "type": "text",
+            "required": "false",
+            "visibility": "config.choice == 'true'"
+        },
+        {
+            "name": "info",
+            "label": "info",
+            "type": "label",
+            "value": "'info'"
+        }
+    ],
+    "events": [
+        {
+            "label": "Webhook",
+            "name": "webhook",
+            "description": "Event triggered when there is a webhook coming from PandaDoc."
+        },
+        {
+            "label": "Callback",
+            "name": "callback",
+            "description": "Happens when a async process is finished"
+        }
+    ],
+    "metadata": [
+        {
+            "type": "script",
+            "namespace": "api",
+            "path": "/scripts/api.js"
+        },
+        {
+            "type": "listener",
+            "namespace": "webhook",
+            "path": "/listeners/webhook.js"
+        },
+        {
+            "type": "flowStep",
+            "namespace": "apiCallSkeleton",
+            "path": "/flowSteps/apiCallSkeleton"
+        },
+        {
+            "type": "flowStep",
+            "namespace": "customFlow",
+            "path": "/flowSteps/customFlow"
+        },
+        {
+            "type": "uiService",
+            "namespace": "testUiService",
+            "path": "/uiServices/testUiService"
+        }
+    ]
+}
