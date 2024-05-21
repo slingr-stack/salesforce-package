@@ -261,7 +261,7 @@ function methodOnInit(){
                     "Accept": "application/json",
                     "Content-Type": "application/x-www-form-urlencoded"
                 },
-                body: {"grant_type": "authorization_code", "code": config.get("code"), "redirect_uri": config.get("redirectUri")}
+                body: {"grant_type": "authorization_code", "code": config.get("code"), "redirect_uri": config.get("redirectUri"), "client_id": config.get("consumerKey"), "client_secret": config.get("consumerSecret")}
             });
         } else {
             refreshTokenResponse = httpService.post({
@@ -270,7 +270,7 @@ function methodOnInit(){
                     "Accept": "application/json",
                     "Content-Type": "application/x-www-form-urlencoded"
                 },
-                body: {"grant_type": "refresh_token", "refresh_token": authorizationCodeFromStorage}
+                body: {"grant_type": "refresh_token", "refresh_token": authorizationCodeFromStorage, "client_id": config.get("consumerKey"), "client_secret": config.get("consumerSecret")}
             });
         }
     }
@@ -281,7 +281,7 @@ function methodOnInit(){
                 "Accept": "application/json",
                 "Content-Type": "application/x-www-form-urlencoded"
             },
-            body: {"grant_type": "password", "username": config.get("userName"), "password": config.get("password")}
+            body: {"grant_type": "password", "username": config.get("userName"), "password": config.get("password"), "client_id": config.get("consumerKey"), "client_secret": config.get("consumerSecret")}
         });
     }
     sys.logs.debug('[salesforce] Refresh token response: ' + JSON.stringify(refreshTokenResponse));
