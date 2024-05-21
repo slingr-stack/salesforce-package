@@ -21,7 +21,12 @@ let httpService = {};
  * Handles a request with retry from the platform side.
  */
 function handleRequestWithRetry(requestFn, options, callbackData, callbacks) {
-    return requestFn(options, callbackData, callbacks);
+    try {
+        return requestFn(options, callbackData, callbacks);
+    } catch (error) {
+        sys.logs.info("[salesforce] Handling request with retry: " + JSON.stringify(error));
+        refreshAccessTokens();
+    }
 }
 
 function createWrapperFunction(requestFn) {
@@ -235,10 +240,14 @@ let stringType = Function.prototype.call.bind(Object.prototype.toString)
  Configurator
  ****************************************************/
 
-let init = true;
-
 let Salesforce = function (options) {
-    if (init) { methodOnInit(); init= false; }
+    if (sys.storage.get('init-Salesforce', {decrypt:true}) === undefined) {
+        if (config.get("accessToken"))
+        {
+            sys.storage.put('accessToken-Salesforce', config.get("accessToken"), {encrypt: true});
+        }
+        sys.storage.put('init-Salesforce', true, {encrypt: true});
+    }
     options = options || {};
     options= setApiUri(options);
     options= setAuthorization(options);
@@ -250,7 +259,7 @@ let Salesforce = function (options) {
  Private API
  ****************************************************/
 
-function methodOnInit(){
+function refreshAccessTokens(){
     let refreshTokenResponse;
     if (config.get("authorizationMethod") === 'webServer') {
         const authorizationCodeFromStorage = sys.storage.get('authorizationCode-Salesforce', {decrypt:true});
@@ -315,7 +324,7 @@ function setAuthorization(options) {
     let authorization = options.authorization || {};
     authorization = mergeJSON(authorization, {
         type: "oauth2",
-        accessToken: sys.storage.get('accessToken-Salesforce', refreshTokenResponse.data.access_token, {decrypt:true}),
+        accessToken: sys.storage.get('accessToken-Salesforce', {decrypt:true}),
         headerPrefix: "Bearer"
     });
     options.authorization = authorization;
