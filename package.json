@@ -1,63 +1,102 @@
 {
-    "name": "skeleton",
-    "label": "Skeleton Package",
+    "name": "salesforce",
+    "label": "Salesforce Package",
     "dependencies": [
         {
             "type": "service",
             "name": "http",
-            "version": "v1.3.7",
+            "version": "v1.6.3",
             "instanceId": "shared"
-        },
-        {
-            "type": "package",
-            "name": "oauth",
-            "version": "v1.0.19"
         }
     ],
-    "configurationBuilder": "/configurationBuilder.js",
     "configuration": [
         {
-            "name": "SKELETON_API_BASE_URL",
-            "label": "Skeleton Api Url",
-            "type": "label",
-            "value": "https://example.com/"
+            "name": "instanceUrl",
+            "label": "Instance URL",
+            "description": "Salesforce Instance URL Value (i.e.: https://MyDomainName.my.salesforce.com)",
+            "type": "text",
+            "required": true
         },
         {
-            "name": "choice",
-            "label": "Choice",
-            "required": false,
-            "defaultValue": "true",
+            "name": "consumerKey",
+            "label": "Consumer Key",
+            "description": "Consumer Key Value - Client ID",
+            "type": "text",
+            "required": true
+        },
+        {
+            "name": "consumerSecret",
+            "label": "Consumer Secret",
+            "description": "Consumer Secret Value - Client Secret",
+            "type": "password",
+            "required": true
+        },
+        {
+            "name": "authorizationMethod",
+            "label": "Authorization Method",
+            "defaultValue": "webServer",
             "type": "buttonsGroup",
             "typeOptions": {
-                "allowCustom": true,
+                "allowCustom": false,
                 "possibleValues": [
                     {
-                        "label": "True",
-                        "name": "true"
+                        "label": "Connect To Salesforce",
+                        "name": "webServer"
                     },
                     {
-                        "label": "False",
-                        "name": "false"
-                    },
-                    {
-                        "label": "Other",
-                        "name": "other"
+                        "label": "Username - Password",
+                        "name": "usernamePassword"
                     }
                 ]
             }
         },
         {
-            "name": "text",
-            "label": "Text",
-            "type": "text",
-            "required": "false",
-            "visibility": "config.choice == 'true'"
+            "name": "redirectUri",
+            "label": "Redirect URI",
+            "description": "Redirect URI to register on your application",
+            "type": "label",
+            "value": "config.SERVER_URL + '/callback'",
+            "visibility": "config.authorizationMethod == 'webServer'"
         },
         {
-            "name": "info",
-            "label": "info",
-            "type": "label",
-            "value": "'info'"
+            "name": "webServerButton",
+            "label": "Connect To Salesforce",
+            "type": "button",
+            "typeOptions": {
+                "color": "primary",
+                "icon": "zmdi-play",
+                "action": "var url = config.instanceUrl + '/services/oauth2/authorize?client_id=' + config.consumerKey + '&redirect_uri=' + config.redirectUri + '&response_type=code';\nvar win = window.open(url, 'Authorization page', 'toolbar=no,scrollbars=no,location=no,statusbar=no,menubar=no,resizable=0,width=500,height=600,left=' + ((screen.width / 2) - 250) + ',top=' + ((screen.height / 2) - 250) + ',');\nvar self = this;\nvar intervalFn = function () {\n    try {\n        if (!win || !win.location) {\n            window.clearInterval(pollTimer);\n        } else {\n            if (win.location.href.startsWith(config.redirectUri)) {\n                win.innerWidth = 100;\n                win.innerHeight = 100;\n                win.screenX = screen.width;\n                win.screenY = screen.height;\n                window.clearInterval(pollTimer);\n                const urlParams = new URLSearchParams(win.location.search);\n                var code;\n                if (urlParams.has('code')) {\n                    code = urlParams.get('code');\n                    config.code = code; \n     win.close(); \n          }\n            }\n           }\n    } catch (e) {\n    }\n};\nvar pollTimer = window.setInterval(function () { intervalFn.apply(self) }, 500);"
+            },
+            "visibility": "config.authorizationMethod == 'webServer'"
+        },
+        {
+            "name": "code",
+            "label": "Authorization Code",
+            "type": "text",
+            "visibility": "config.authorizationMethod == 'webServer'"
+        },
+        {
+            "name": "userName",
+            "label": "Username",
+            "description": "Customer Username Value",
+            "type": "text",
+            "required": "config.authorizationMethod == 'usernamePassword'",
+            "visibility": "config.authorizationMethod == 'usernamePassword'"
+        },
+        {
+            "name": "password",
+            "label": "Password",
+            "description": "Customer Password Value",
+            "type": "password",
+            "required": "config.authorizationMethod == 'usernamePassword'",
+            "visibility": "config.authorizationMethod == 'usernamePassword'"
+        },
+        {
+            "name": "appConfig",
+            "label": "Important",
+            "value": "Append the users security token to their password. A security token is an automatically generated key from Salesforce. For example, if a user's password is mypassword, and their security token is XXXXXXXXXX, then the value provided for this parameter must be mypasswordXXXXXXXXXX.",
+            "type": "info",
+            "visibility": "config.authorizationMethod == 'usernamePassword'"
         }
     ],
     "events": [
@@ -85,18 +124,8 @@
         },
         {
             "type": "flowStep",
-            "namespace": "apiCallSkeleton",
-            "path": "/flowSteps/apiCallSkeleton"
-        },
-        {
-            "type": "flowStep",
-            "namespace": "customFlow",
-            "path": "/flowSteps/customFlow"
-        },
-        {
-            "type": "uiService",
-            "namespace": "testUiService",
-            "path": "/uiServices/testUiService"
+            "namespace": "apiCallSalesforce",
+            "path": "/flowSteps/apiCallSalesforce"
         }
     ]
 }
