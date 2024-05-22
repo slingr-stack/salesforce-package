@@ -20,7 +20,7 @@ var httpService = dependencies.http;
  * {number} connectionTimeout, Read timeout interval, in milliseconds.
  * {number} readTimeout, Connect timeout interval, in milliseconds.
  */
-step.apiCallSkeleton = function (inputs) {
+step.apiCallSalesforce = function (inputs) {
 
 	var inputsLogic = {
 		headers: inputs.headers || [],
@@ -57,8 +57,11 @@ step.apiCallSkeleton = function (inputs) {
 		readTimeout: inputsLogic.readTimeout
 	}
 
+	methodOnInit();
+
 	options= setApiUri(options);
 	options= setRequestHeaders(options);
+	options= setAuthorization(options);
 
 	switch (inputsLogic.method.toLowerCase()) {
 		case 'get':
@@ -117,81 +120,77 @@ function stringToObject (obj) {
 	return null;
 }
 
+
+function methodOnInit(){
+	var refreshTokenResponse;
+	if (config.get("authorizationMethod") === 'webServer') {
+		var authorizationCodeFromStorage = sys.storage.get('authorizationCode-Salesforce', {decrypt:true});
+		if (authorizationCodeFromStorage === undefined) {
+			refreshTokenResponse = httpService.post({
+				url: config.get("instanceUrl") + '/services/oauth2/token',
+				headers: {
+					"Accept": "application/json",
+					"Content-Type": "application/x-www-form-urlencoded"
+				},
+				body: {"grant_type": "authorization_code", "code": config.get("code"), "redirect_uri": config.get("redirectUri")}
+			});
+		} else {
+			refreshTokenResponse = httpService.post({
+				url: config.get("instanceUrl") + '/services/oauth2/token',
+				headers: {
+					"Accept": "application/json",
+					"Content-Type": "application/x-www-form-urlencoded"
+				},
+				body: {"grant_type": "refresh_token", "refresh_token": authorizationCodeFromStorage}
+			});
+		}
+	}
+	if (config.get("authorizationMethod") === 'usernamePassword') {
+		refreshTokenResponse = httpService.post({
+			url: config.get("instanceUrl") + '/services/oauth2/token',
+			headers: {
+				"Accept": "application/json",
+				"Content-Type": "application/x-www-form-urlencoded"
+			},
+			body: {"grant_type": "password", "username": config.get("userName"), "password": config.get("password")}
+		});
+	}
+	sys.logs.debug('[salesforce] Refresh token response: ' + JSON.stringify(refreshTokenResponse));
+	if (!!refreshTokenResponse && !!refreshTokenResponse.data && !!refreshTokenResponse.data.refresh_token) {
+		sys.storage.put('authorizationCode-Salesforce', refreshTokenResponse.data.refresh_token, {encrypt:true});
+	}
+	if (!!refreshTokenResponse && !!refreshTokenResponse.data && !!refreshTokenResponse.data.access_token) {
+		sys.storage.put('accessToken-Salesforce', refreshTokenResponse.data.access_token, {encrypt:true});
+	}
+}
+
 function setApiUri(options) {
-	var API_URL = config.get("SKELETON_API_BASE_URL");
 	var url = options.path || "";
+	var API_URL = config.get("instanceUrl");
 	options.url = API_URL + url;
-	sys.logs.debug('[skeleton] Set url: ' + options.path + "->" + options.url);
+	sys.logs.debug('[salesforce] Set url: ' + options.path + "->" + options.url);
 	return options;
 }
 
 function setRequestHeaders(options) {
 	var headers = options.headers || {};
 
-	sys.logs.debug('[skeleton] Set header Bearer');
 	headers = mergeJSON(headers, {"Content-Type": "application/json"});
-	headers = mergeJSON(headers, {"Authorization": "Bearer "+getAccessTokenForAccount()});
-
-	if (headers.Accept === undefined || headers.Accept === null || headers.Accept === "") {
-		sys.logs.debug('[skeleton] Set header accept');
-		headers = mergeJSON(headers, {"Accept": "application/json"});
-	}
 
 	options.headers = headers;
 	return options;
 }
 
-function getAccessTokenForAccount(account) {
-	account = account || "account";
-	sys.logs.info('[skeleton] Getting access token for account: '+account);
-	var installationJson = sys.storage.get('installationInfo-Skeleton---'+account) || {id: null};
-	var token = installationJson.token || null;
-	var expiration = installationJson.expiration || 0;
-	if (!token || expiration < new Date().getTime()) {
-		sys.logs.info('[skeleton] Access token is expired or not found. Getting new token');
-		var res = httpService.post(
-			{
-				url: "https://oauth2.googleapis.com/token",
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded'
-				},
-				body: {
-					grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-					assertion: getJsonWebToken()
-				}
-			});
-		token = res.access_token;
-		var expires_at = res.expires_in;
-		expiration = new Date(new Date(expires_at) - 1 * 60 * 1000).getTime();
-		installationJson = mergeJSON(installationJson, {"token": token, "expiration": expiration});
-		sys.logs.info('[skeleton] Saving new token for account: ' + account);
-		sys.storage.replace('installationInfo-Skeleton---'+account, installationJson);
-	}
-	return token;
-}
-
-function getJsonWebToken() {
-	var currentTime = new Date().getTime();
-	var futureTime = new Date(currentTime + ( 10 * 60 * 1000)).getTime();
-	var scopeProp= config.get("scope");
-	var scopes;
-	if (!!scopeProp) {
-		scopes = scopeProp.map(function (s) {
-			return "https://www.googleapis.com/auth/" + s;
-		});
-	}
-	var scopesGlobal = scopes.join(" ");
-	return sys.utils.crypto.jwt.generate(
-		{
-			iss: config.get("serviceAccountEmail"),
-			aud: GOOGLEWORKSPACE_API_AUTH_URL,
-			scope: scopesGlobal,
-			iat: currentTime,
-			exp: futureTime
-		},
-		config.get("privateKey"),
-		"RS256"
-	)
+function setAuthorization(options) {
+	sys.logs.debug('[salesforce] Setting header token oauth');
+	var authorization = options.authorization || {};
+	authorization = mergeJSON(authorization, {
+		type: "oauth2",
+		accessToken: sys.storage.get('accessToken-Salesforce', refreshTokenResponse.data.access_token, {decrypt:true}),
+		headerPrefix: "Bearer"
+	});
+	options.authorization = authorization;
+	return options;
 }
 
 function mergeJSON (json1, json2) {

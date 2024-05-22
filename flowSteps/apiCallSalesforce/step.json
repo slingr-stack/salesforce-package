@@ -1,8 +1,8 @@
 {
-	"label": "API call to skeleton",
-	"name": "apiCallSkeleton",
+	"label": "API call to salesforce",
+	"name": "apiCallSalesforce",
 	"category": "integrations",
-	"description": "This flow step will send generic request to skeleton.",
+	"description": "This flow step will send generic request to salesforce.",
 	"inputs": [
 		{
 			"label": "Method",
